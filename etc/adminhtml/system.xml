@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_file.xsd">
+    <system>
+        <tab id="magesuite" translate="label" sortOrder="300">
+            <label>MageSuite</label>
+        </tab>
+        <section id="sentry_io" translate="label" type="text" sortOrder="200" showInDefault="1">
+            <label>SentryIO</label>
+            <tab>magesuite</tab>
+            <resource>MageSuite_SentryIo::config_sentryio</resource>
+            <group id="configuration" translate="label" type="text" sortOrder="1" showInDefault="1">
+                <label>Configuration</label>
+                <field id="data_source_name" translate="label" type="text" sortOrder="10" showInDefault="1">
+                    <label>Data Source Name</label>
+                    <validate>validate-url</validate>
+                </field>
+                <field id="custom_configuration" translate="label" type="textarea" sortOrder="20" showInDefault="1">
+                    <label>Custom configuration</label>
+                    <comment><![CDATA[Custom <a href="https://docs.sentry.io/clients/javascript/config/">sentry.io configuration object</a> which keys will overwrite provided default ones.]]></comment>
+                </field>
+            </group>
+        </section>
+    </system>
+</config>
