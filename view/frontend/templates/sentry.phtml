@@ -5,6 +5,11 @@ if ($sentryDSN):
 ?>
     <script>
         require(['jquery', 'raven'], function($, raven) {
+            var isLeavingPage = false;
+
+            $(window).on('beforeunload pagehide', function() {
+                isLeavingPage = true;
+            });
             // Ignore list based off: https://gist.github.com/1878283
             var ravenOptions = $.extend(
                 {
@@ -37,13 +42,17 @@ if ($sentryDSN):
                         /webappstoolbarba\.texthelp\.com\//i,
                         /metrics\.itunes\.apple\.com\.edgesuite\.net\//i
                     ],
-                    release: '<?= $this->getMagentoVersion(); ?>'
+                    release: '<?= $this->getMagentoVersion(); ?>',
+                    shouldSendCallback: function() {
+                        console.log(isLeavingPage);
+                        return !isLeavingPage;
+                    }
                 },
                 <?= $customConfiguration; ?>
             );
             raven.config('<?=$sentryDSN;?>', ravenOptions).install();
 
-            require(['jquery', 'jquery/jquery-storageapi'], function($) {
+            require(['jquery/jquery-storageapi'], function() {
                 var scramble = function(data) {
                     return data ? data.replace(/\B[a-z]/g, "*") : '';
                 }
