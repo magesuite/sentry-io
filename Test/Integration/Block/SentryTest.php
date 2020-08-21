@@ -14,7 +14,7 @@ class SentryTest extends \PHPUnit\Framework\TestCase
      */
     private $sentryBlock;
 
-    public function setUp() {
+    public function setUp(): void {
         $this->objectManager = \Magento\TestFramework\ObjectManager::getInstance();
 
         $this->sentryBlock = $this->objectManager->get(\MageSuite\SentryIo\Block\Sentry::class);
