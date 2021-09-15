@@ -44,7 +44,6 @@ if ($sentryDSN):
                     ],
                     release: '<?= $this->getMagentoVersion(); ?>',
                     shouldSendCallback: function() {
-                        console.log(isLeavingPage);
                         return !isLeavingPage;
                     }
                 },
