@@ -46,6 +46,12 @@ if ($sentryDSN):
                     shouldSendCallback: function() {
                         console.log(isLeavingPage);
                         return !isLeavingPage;
+                    },
+                    dataCallback: function(event) {
+                        if (event.transaction) {
+                            event.transaction = event.transaction.replace(/\/static\/version[0-9]+\//, "/static/");
+                        }
+                        return event;
                     }
                 },
                 <?= $customConfiguration; ?>
