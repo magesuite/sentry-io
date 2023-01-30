@@ -9,15 +9,17 @@ $customConfiguration = $viewModel->getCustomConfiguration() ?? '{}';
 <?php if ($sentryDSN) : ?>
 <script src="<?= $escaper->escapeUrl($block->getViewFileUrl("MageSuite_SentryIo::sentry/bundle.tracing.min.js"))?>" data-defer-ignore="true"></script>
 <script data-defer-ignore="true">
+    <?php
+    /**
+     * Set tracesSampleRate to 1.0 to capture 100%
+     * of transactions for performance monitoring.
+     * We recommend adjusting this value in production
+     *
+     * Ignore list based off: https://gist.github.com/1878283
+     */
+    ?>
     const defaultConfig = {
         dsn: "<?= $escaper->escapeHtml($sentryDSN); ?>",
-        <?php
-        /**
-         * Set tracesSampleRate to 1.0 to capture 100%
-         * of transactions for performance monitoring.
-         * We recommend adjusting this value in production
-         */
-        ?>
         tracesSampleRate: 1.0,
         sampleRate: 1.0,
         ignoreErrors: [
