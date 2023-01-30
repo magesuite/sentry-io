@@ -2,13 +2,12 @@
 
 $viewModel = $block->getViewModel();
 $sentryDSN = $viewModel->getDataSourceName();
+$customConfiguration = $viewModel->getCustomConfiguration() ?? '{}';
 
-if ($sentryDSN):
-    $customConfiguration = $viewModel->getCustomConfiguration() ?? '{}';
 ?>
 
-<script src="<?= $block->getViewFileUrl("MageSuite_SentryIo::sentry/bundle.tracing.min.js")?>" data-defer-ignore="true"></script>
-
+<?php if ($sentryDSN) : ?>
+<script src="<?= $escaper->escapeUrl($block->getViewFileUrl("MageSuite_SentryIo::sentry/bundle.tracing.min.js"))?>" data-defer-ignore="true"></script>
 <script data-defer-ignore="true">
     const defaultConfig = {
         dsn: "<?= $escaper->escapeHtml($sentryDSN); ?>",
