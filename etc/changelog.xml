@@ -1,0 +1,16 @@
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:MageSuite_Changelog:etc/changelog.xsd">
+    <module
+        id="MageSuite_SentryIo"
+        name="MageSuite_SentryIo"
+        description="This module provides JS Integration for Sentry.io SDK"
+        url="https://github.com/magesuite/sentry-io">
+        <changelog>
+            <tag version="v2.0.0" date="2023-01-30">
+                <entry>
+                    <type>FEATURE</type>
+                    <overview>Refactored to use new Sentry.io SDK JavaScript integration.</overview>
+                </entry>
+            </tag>
+        </changelog>
+    </module>
+</config>

@@ -6,6 +6,7 @@ class Sentry extends \Magento\Framework\View\Element\Template
 {
     protected $_template = 'MageSuite_SentryIo::sentry.phtml';
 
+    const SENTRY_ENABLE_PATH = 'sentry_io/configuration/enable_sentry';
     const SENTRY_DATA_SOURCE_NAME_PATH = 'sentry_io/configuration/data_source_name';
     const SENTRY_CUSTOM_CONFIGURATION_PATH = 'sentry_io/configuration/custom_configuration';
 

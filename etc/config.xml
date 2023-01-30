@@ -3,6 +3,7 @@
     <default>
         <sentry_io>
             <configuration>
+                <is_enabled>0</is_enabled>
                 <custom_configuration>{}</custom_configuration>
             </configuration>
         </sentry_io>
