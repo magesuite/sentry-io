@@ -1,14 +1,17 @@
 <?php
-$sentryDSN = $block->getDataSourceName();
+
+$viewModel = $block->getViewModel();
+$sentryDSN = $viewModel->getDataSourceName();
+
 if ($sentryDSN):
-    $customConfiguration = $block->getCustomConfiguration() ?? '{}';
+    $customConfiguration = $viewModel->getCustomConfiguration() ?? '{}';
 ?>
 
 <script src="<?= $block->getViewFileUrl("MageSuite_SentryIo::sentry/bundle.tracing.min.js")?>" data-defer-ignore="true"></script>
 
 <script data-defer-ignore="true">
     const defaultConfig = {
-        dsn: "<?=$sentryDSN;?>",
+        dsn: "<?= $escaper->escapeHtml($sentryDSN); ?>",
         <?php
         /**
          * Set tracesSampleRate to 1.0 to capture 100%
@@ -18,7 +21,6 @@ if ($sentryDSN):
         ?>
         tracesSampleRate: 1.0,
         sampleRate: 1.0,
-
         ignoreErrors: [
             'top.GLOBALS',
             'originalCreateNotification',
@@ -48,12 +50,12 @@ if ($sentryDSN):
             /webappstoolbarba\.texthelp\.com\//i,
             /metrics\.itunes\.apple\.com\.edgesuite\.net\//i
         ],
-        release: '<?= $block->getMagentoVersion(); ?>',
+        release: "<?= $escaper->escapeHtml($viewModel->getMagentoVersion()) ?>",
     }
 
     const options = {
         ...defaultConfig,
-        ...<?= $customConfiguration; ?>
+        ...<?= $escaper->escapeHtml($customConfiguration); ?>
     }
 
     Sentry.init(options);
