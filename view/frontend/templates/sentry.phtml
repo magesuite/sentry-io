@@ -50,6 +50,9 @@ if ($sentryDSN):
                 <?= $customConfiguration; ?>
             );
             raven.config('<?=$sentryDSN;?>', ravenOptions).install();
+            if (!window.Raven) {
+                window.Raven = raven;
+            }
 
             require(['jquery/jquery-storageapi'], function() {
                 var scramble = function(data) {
