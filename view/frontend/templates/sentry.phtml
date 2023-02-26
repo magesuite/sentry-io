@@ -56,7 +56,7 @@ $customConfiguration = $viewModel->getCustomConfiguration() ?? '{}';
 
     const options = {
         ...defaultConfig,
-        ...<?= $escaper->escapeHtml($customConfiguration); ?>
+        ...<?= $customConfiguration ?>
     }
 
     Sentry.init(options);
