@@ -17,28 +17,28 @@
     }
     RavenConfigError.prototype = new Error();
     RavenConfigError.prototype.constructor = RavenConfigError;
-    
+
     module.exports = RavenConfigError;
-    
+
     },{}],2:[function(_dereq_,module,exports){
     var utils = _dereq_(5);
-    
+
     var wrapMethod = function(console, level, callback) {
       var originalConsoleLevel = console[level];
       var originalConsole = console;
-    
+
       if (!(level in console)) {
         return;
       }
-    
+
       var sentryLevel = level === 'warn' ? 'warning' : level;
-    
+
       console[level] = function() {
         var args = [].slice.call(arguments);
-    
+
         var msg = utils.safeJoin(args, ' ');
         var data = {level: sentryLevel, logger: 'console', extra: {arguments: args}};
-    
+
         if (level === 'assert') {
           if (args[0] === false) {
             // Default browsers message
@@ -50,7 +50,7 @@
         } else {
           callback && callback(msg, data);
         }
-    
+
         // this fails for some browsers. :(
         if (originalConsoleLevel) {
           // IE9 doesn't allow calling apply on console functions directly
@@ -59,20 +59,20 @@
         }
       };
     };
-    
+
     module.exports = {
       wrapMethod: wrapMethod
     };
-    
+
     },{"5":5}],3:[function(_dereq_,module,exports){
     (function (global){
     /*global XDomainRequest:false */
-    
+
     var TraceKit = _dereq_(6);
     var stringify = _dereq_(7);
     var md5 = _dereq_(8);
     var RavenConfigError = _dereq_(1);
-    
+
     var utils = _dereq_(5);
     var isErrorEvent = utils.isErrorEvent;
     var isDOMError = utils.isDOMError;
@@ -103,16 +103,16 @@
     var serializeKeysForMessage = utils.serializeKeysForMessage;
     var serializeException = utils.serializeException;
     var sanitize = utils.sanitize;
-    
+
     var wrapConsoleMethod = _dereq_(2).wrapMethod;
-    
+
     var dsnKeys = 'source protocol user pass host port path'.split(' '),
       dsnPattern = /^(?:(\w+):)?\/\/(?:(\w+)(:\w+)?@)?([\w\.-]+)(?::(\d+))?(\/.*)/;
-    
+
     function now() {
       return +new Date();
     }
-    
+
     // This is to be defensive in environments where window does not exist (see https://github.com/getsentry/raven-js/pull/785)
     var _window =
       typeof window !== 'undefined'
@@ -120,7 +120,7 @@
         : typeof global !== 'undefined' ? global : typeof self !== 'undefined' ? self : {};
     var _document = _window.document;
     var _navigator = _window.navigator;
-    
+
     function keepOriginalCallback(original, callback) {
       return isFunction(callback)
         ? function(data) {
@@ -128,7 +128,7 @@
           }
         : callback;
     }
-    
+
     // First, check for JSON support
     // If there is no JSON, we no-op the core features of Raven
     // since JSON is required to encode the payload
@@ -189,30 +189,30 @@
       this._location = _window.location;
       this._lastHref = this._location && this._location.href;
       this._resetBackoff();
-    
+
       // eslint-disable-next-line guard-for-in
       for (var method in this._originalConsole) {
         this._originalConsoleMethods[method] = this._originalConsole[method];
       }
     }
-    
+
     /*
      * The core Raven singleton
      *
      * @this {Raven}
      */
-    
+
     Raven.prototype = {
       // Hardcode version string so that raven source can be loaded directly via
       // webpack (using a build step causes webpack #1617). Grunt verifies that
       // this value matches package.json during build.
       //   See: https://github.com/getsentry/raven-js/issues/465
       VERSION: '3.26.4',
-    
+
       debug: false,
-    
+
       TraceKit: TraceKit, // alias to TraceKit
-    
+
       /*
          * Configure Raven with a DSN and extra options
          *
@@ -222,15 +222,15 @@
          */
       config: function(dsn, options) {
         var self = this;
-    
+
         if (self._globalServer) {
           this._logDebug('error', 'Error: Raven has already been configured');
           return self;
         }
         if (!dsn) return self;
-    
+
         var globalOptions = self._globalOptions;
-    
+
         // merge in options
         if (options) {
           each(options, function(key, value) {
@@ -242,14 +242,14 @@
             }
           });
         }
-    
+
         self.setDSN(dsn);
-    
+
         // "Script error." is hard coded into browsers for errors that it can't read.
         // this is the result of a script being pulled in from an external domain and CORS.
         globalOptions.ignoreErrors.push(/^Script error\.?$/);
         globalOptions.ignoreErrors.push(/^Javascript error: Script error\.? on line 0$/);
-    
+
         // join regexp rules into one big rule
         globalOptions.ignoreErrors = joinRegExp(globalOptions.ignoreErrors);
         globalOptions.ignoreUrls = globalOptions.ignoreUrls.length
@@ -263,7 +263,7 @@
           0,
           Math.min(globalOptions.maxBreadcrumbs || 100, 100)
         ); // default and hard limit is 100
-    
+
         var autoBreadcrumbDefaults = {
           xhr: true,
           console: true,
@@ -271,7 +271,7 @@
           location: true,
           sentry: true
         };
-    
+
         var autoBreadcrumbs = globalOptions.autoBreadcrumbs;
         if ({}.toString.call(autoBreadcrumbs) === '[object Object]') {
           autoBreadcrumbs = objectMerge(autoBreadcrumbDefaults, autoBreadcrumbs);
@@ -279,11 +279,11 @@
           autoBreadcrumbs = autoBreadcrumbDefaults;
         }
         globalOptions.autoBreadcrumbs = autoBreadcrumbs;
-    
+
         var instrumentDefaults = {
           tryCatch: true
         };
-    
+
         var instrument = globalOptions.instrument;
         if ({}.toString.call(instrument) === '[object Object]') {
           instrument = objectMerge(instrumentDefaults, instrument);
@@ -291,13 +291,13 @@
           instrument = instrumentDefaults;
         }
         globalOptions.instrument = instrument;
-    
+
         TraceKit.collectWindowErrors = !!globalOptions.collectWindowErrors;
-    
+
         // return for chaining
         return self;
       },
-    
+
       /*
          * Installs a global window.onerror error handler
          * to capture and report uncaught exceptions.
@@ -312,29 +312,29 @@
           TraceKit.report.subscribe(function() {
             self._handleOnErrorStackInfo.apply(self, arguments);
           });
-    
+
           if (self._globalOptions.captureUnhandledRejections) {
             self._attachPromiseRejectionHandler();
           }
-    
+
           self._patchFunctionToString();
-    
+
           if (self._globalOptions.instrument && self._globalOptions.instrument.tryCatch) {
             self._instrumentTryCatch();
           }
-    
+
           if (self._globalOptions.autoBreadcrumbs) self._instrumentBreadcrumbs();
-    
+
           // Install all of the plugins
           self._drainPlugins();
-    
+
           self._isRavenInstalled = true;
         }
-    
+
         Error.stackTraceLimit = self._globalOptions.stackTraceLimit;
         return this;
       },
-    
+
       /*
          * Set the DSN (can be called multiple time unlike config)
          *
@@ -345,22 +345,22 @@
           uri = self._parseDSN(dsn),
           lastSlash = uri.path.lastIndexOf('/'),
           path = uri.path.substr(1, lastSlash);
-    
+
         self._dsn = dsn;
         self._globalKey = uri.user;
         self._globalSecret = uri.pass && uri.pass.substr(1);
         self._globalProject = uri.path.substr(lastSlash + 1);
-    
+
         self._globalServer = self._getGlobalServer(uri);
-    
+
         self._globalEndpoint =
           self._globalServer + '/' + path + 'api/' + self._globalProject + '/store/';
-    
+
         // Reset backoff state since we may be pointing at a
         // new project/server
         this._resetBackoff();
       },
-    
+
       /*
          * Wrap code within a context so Raven can capture errors
          * reliably across domains that is executed immediately.
@@ -375,10 +375,10 @@
           func = options;
           options = {};
         }
-    
+
         return this.wrap(options, func).apply(this, args);
       },
-    
+
       /*
          * Wrap code within a context and returns back a new function to be executed
          *
@@ -394,25 +394,25 @@
         if (isUndefined(func) && !isFunction(options)) {
           return options;
         }
-    
+
         // options is optional
         if (isFunction(options)) {
           func = options;
           options = undefined;
         }
-    
+
         // At this point, we've passed along 2 arguments, and the second one
         // is not a function either, so we'll just return the second argument.
         if (!isFunction(func)) {
           return func;
         }
-    
+
         // We don't wanna wrap it twice!
         try {
           if (func.__raven__) {
             return func;
           }
-    
+
           // If this has already been wrapped in the past, return that
           if (func.__raven_wrapper__) {
             return func.__raven_wrapper__;
@@ -423,20 +423,20 @@
           // Bail on wrapping and return the function as-is (defers to window.onerror).
           return func;
         }
-    
+
         function wrapped() {
           var args = [],
             i = arguments.length,
             deep = !options || (options && options.deep !== false);
-    
+
           if (_before && isFunction(_before)) {
             _before.apply(this, arguments);
           }
-    
+
           // Recursively wrap all of a function's arguments that are
           // functions themselves.
           while (i--) args[i] = deep ? self.wrap(options, arguments[i]) : arguments[i];
-    
+
           try {
             // Attempt to invoke user-land function
             // NOTE: If you are a Sentry user, and you are seeing this stack frame, it
@@ -449,7 +449,7 @@
             throw e;
           }
         }
-    
+
         // copy over properties of the old function
         for (var property in func) {
           if (hasKey(func, property)) {
@@ -457,16 +457,16 @@
           }
         }
         wrapped.prototype = func.prototype;
-    
+
         func.__raven_wrapper__ = wrapped;
         // Signal that this function has been wrapped/filled already
         // for both debugging and to prevent it to being wrapped/filled twice
         wrapped.__raven__ = true;
         wrapped.__orig__ = func;
-    
+
         return wrapped;
       },
-    
+
       /**
        * Uninstalls the global error handler.
        *
@@ -474,18 +474,18 @@
        */
       uninstall: function() {
         TraceKit.report.uninstall();
-    
+
         this._detachPromiseRejectionHandler();
         this._unpatchFunctionToString();
         this._restoreBuiltIns();
         this._restoreConsole();
-    
+
         Error.stackTraceLimit = this._originalErrorStackTraceLimit;
         this._isRavenInstalled = false;
-    
+
         return this;
       },
-    
+
       /**
        * Callback used for `unhandledrejection` event
        *
@@ -503,7 +503,7 @@
           }
         });
       },
-    
+
       /**
        * Installs the global promise rejection handler.
        *
@@ -515,7 +515,7 @@
           _window.addEventListener('unhandledrejection', this._promiseRejectionHandler);
         return this;
       },
-    
+
       /**
        * Uninstalls the global promise rejection handler.
        *
@@ -526,7 +526,7 @@
           _window.removeEventListener('unhandledrejection', this._promiseRejectionHandler);
         return this;
       },
-    
+
       /**
        * Manually capture an exception and send it over to Sentry
        *
@@ -536,7 +536,7 @@
        */
       captureException: function(ex, options) {
         options = objectMerge({trimHeadFrames: 0}, options ? options : {});
-    
+
         if (isErrorEvent(ex) && ex.error) {
           // If it is an ErrorEvent with `error` property, extract it to get actual Error
           ex = ex.error;
@@ -547,7 +547,7 @@
           // https://developer.mozilla.org/en-US/docs/Web/API/DOMException
           var name = ex.name || (isDOMError(ex) ? 'DOMError' : 'DOMException');
           var message = ex.message ? name + ': ' + ex.message : name;
-    
+
           return this.captureMessage(
             message,
             objectMerge(options, {
@@ -581,10 +581,10 @@
             })
           );
         }
-    
+
         // Store the raw exception object for potential debugging and introspection
         this._lastCapturedException = ex;
-    
+
         // TraceKit.report will re-raise any exception passed to it,
         // which means you have to wrap it in try/catch. Instead, we
         // can wrap it here and only re-raise if TraceKit.report
@@ -598,10 +598,10 @@
             throw ex1;
           }
         }
-    
+
         return this;
       },
-    
+
       _getCaptureExceptionOptionsFromPlainObject: function(currentOptions, ex) {
         var exKeys = Object.keys(ex).sort();
         var options = objectMerge(currentOptions, {
@@ -611,10 +611,10 @@
           extra: currentOptions.extra || {}
         });
         options.extra.__serialized__ = serializeException(ex);
-    
+
         return options;
       },
-    
+
       /*
          * Manually send a message to Sentry
          *
@@ -632,17 +632,17 @@
         ) {
           return;
         }
-    
+
         options = options || {};
         msg = msg + ''; // Make sure it's actually a string
-    
+
         var data = objectMerge(
           {
             message: msg
           },
           options
         );
-    
+
         var ex;
         // Generate a "synthetic" stack trace from this point.
         // NOTE: If you are a Sentry user, and you are seeing this stack frame, it is NOT indicative
@@ -653,43 +653,43 @@
         } catch (ex1) {
           ex = ex1;
         }
-    
+
         // null exception name so `Error` isn't prefixed to msg
         ex.name = null;
         var stack = TraceKit.computeStackTrace(ex);
-    
+
         // stack[0] is `throw new Error(msg)` call itself, we are interested in the frame that was just before that, stack[1]
         var initialCall = isArray(stack.stack) && stack.stack[1];
-    
+
         // if stack[1] is `Raven.captureException`, it means that someone passed a string to it and we redirected that call
         // to be handled by `captureMessage`, thus `initialCall` is the 3rd one, not 2nd
         // initialCall => captureException(string) => captureMessage(string)
         if (initialCall && initialCall.func === 'Raven.captureException') {
           initialCall = stack.stack[2];
         }
-    
+
         var fileurl = (initialCall && initialCall.url) || '';
-    
+
         if (
           !!this._globalOptions.ignoreUrls.test &&
           this._globalOptions.ignoreUrls.test(fileurl)
         ) {
           return;
         }
-    
+
         if (
           !!this._globalOptions.whitelistUrls.test &&
           !this._globalOptions.whitelistUrls.test(fileurl)
         ) {
           return;
         }
-    
+
         // Always attempt to get stacktrace if message is empty.
         // It's the only way to provide any helpful information to the user.
         if (this._globalOptions.stacktrace || options.stacktrace || data.message === '') {
           // fingerprint on msg, not stack trace (legacy behavior, could be revisited)
           data.fingerprint = data.fingerprint == null ? msg : data.fingerprint;
-    
+
           options = objectMerge(
             {
               trimHeadFrames: 0
@@ -701,27 +701,27 @@
           // We add to the trim counter so that callers can choose to trim extra frames, such
           // as utility functions.
           options.trimHeadFrames += 1;
-    
+
           var frames = this._prepareFrames(stack, options);
           data.stacktrace = {
             // Sentry expects frames oldest to newest
             frames: frames.reverse()
           };
         }
-    
+
         // Make sure that fingerprint is always wrapped in an array
         if (data.fingerprint) {
           data.fingerprint = isArray(data.fingerprint)
             ? data.fingerprint
             : [data.fingerprint];
         }
-    
+
         // Fire away!
         this._send(data);
-    
+
         return this;
       },
-    
+
       captureBreadcrumb: function(obj) {
         var crumb = objectMerge(
           {
@@ -729,35 +729,35 @@
           },
           obj
         );
-    
+
         if (isFunction(this._globalOptions.breadcrumbCallback)) {
           var result = this._globalOptions.breadcrumbCallback(crumb);
-    
+
           if (isObject(result) && !isEmptyObject(result)) {
             crumb = result;
           } else if (result === false) {
             return this;
           }
         }
-    
+
         this._breadcrumbs.push(crumb);
         if (this._breadcrumbs.length > this._globalOptions.maxBreadcrumbs) {
           this._breadcrumbs.shift();
         }
         return this;
       },
-    
+
       addPlugin: function(plugin /*arg1, arg2, ... argN*/) {
         var pluginArgs = [].slice.call(arguments, 1);
-    
+
         this._plugins.push([plugin, pluginArgs]);
         if (this._isRavenInstalled) {
           this._drainPlugins();
         }
-    
+
         return this;
       },
-    
+
       /*
          * Set/clear a user to be sent along with the payload.
          *
@@ -767,10 +767,10 @@
       setUserContext: function(user) {
         // Intentionally do not merge here since that's an unexpected behavior.
         this._globalContext.user = user;
-    
+
         return this;
       },
-    
+
       /*
          * Merge extra attributes to be sent along with the payload.
          *
@@ -779,10 +779,10 @@
          */
       setExtraContext: function(extra) {
         this._mergeContext('extra', extra);
-    
+
         return this;
       },
-    
+
       /*
          * Merge tags to be sent along with the payload.
          *
@@ -791,10 +791,10 @@
          */
       setTagsContext: function(tags) {
         this._mergeContext('tags', tags);
-    
+
         return this;
       },
-    
+
       /*
          * Clear all of the context.
          *
@@ -802,10 +802,10 @@
          */
       clearContext: function() {
         this._globalContext = {};
-    
+
         return this;
       },
-    
+
       /*
          * Get a copy of the current context. This cannot be mutated.
          *
@@ -815,7 +815,7 @@
         // lol javascript
         return JSON.parse(stringify(this._globalContext));
       },
-    
+
       /*
          * Set environment of application
          *
@@ -824,10 +824,10 @@
          */
       setEnvironment: function(environment) {
         this._globalOptions.environment = environment;
-    
+
         return this;
       },
-    
+
       /*
          * Set release version of application
          *
@@ -836,10 +836,10 @@
          */
       setRelease: function(release) {
         this._globalOptions.release = release;
-    
+
         return this;
       },
-    
+
       /*
          * Set the dataCallback option
          *
@@ -852,7 +852,7 @@
         this._globalOptions.dataCallback = keepOriginalCallback(original, callback);
         return this;
       },
-    
+
       /*
          * Set the breadcrumbCallback option
          *
@@ -865,7 +865,7 @@
         this._globalOptions.breadcrumbCallback = keepOriginalCallback(original, callback);
         return this;
       },
-    
+
       /*
          * Set the shouldSendCallback option
          *
@@ -878,7 +878,7 @@
         this._globalOptions.shouldSendCallback = keepOriginalCallback(original, callback);
         return this;
       },
-    
+
       /**
        * Override the default HTTP transport mechanism that transmits data
        * to the Sentry server.
@@ -890,10 +890,10 @@
        */
       setTransport: function(transport) {
         this._globalOptions.transport = transport;
-    
+
         return this;
       },
-    
+
       /*
          * Get the latest raw exception that was captured by Raven.
          *
@@ -902,7 +902,7 @@
       lastException: function() {
         return this._lastCapturedException;
       },
-    
+
       /*
          * Get the last event id
          *
@@ -911,7 +911,7 @@
       lastEventId: function() {
         return this._lastEventId;
       },
-    
+
       /*
          * Determine if Raven is setup and ready to go.
          *
@@ -928,23 +928,23 @@
         }
         return true;
       },
-    
+
       afterLoad: function() {
         // TODO: remove window dependence?
-    
+
         // Attempt to initialize Raven on load
         var RavenConfig = _window.RavenConfig;
         if (RavenConfig) {
           this.config(RavenConfig.dsn, RavenConfig.config).install();
         }
       },
-    
+
       showReportDialog: function(options) {
         if (
           !_document // doesn't work without a document (React native)
         )
           return;
-    
+
         options = Object.assign(
           {
             eventId: this.lastEventId(),
@@ -953,18 +953,18 @@
           },
           options
         );
-    
+
         if (!options.eventId) {
           throw new RavenConfigError('Missing eventId');
         }
-    
+
         if (!options.dsn) {
           throw new RavenConfigError('Missing DSN');
         }
-    
+
         var encode = encodeURIComponent;
         var encodedOptions = [];
-    
+
         for (var key in options) {
           if (key === 'user') {
             var user = options.user;
@@ -975,13 +975,13 @@
           }
         }
         var globalServer = this._getGlobalServer(this._parseDSN(options.dsn));
-    
+
         var script = _document.createElement('script');
         script.async = true;
         script.src = globalServer + '/api/embed/error-page/?' + encodedOptions.join('&');
         (_document.head || _document.body).appendChild(script);
       },
-    
+
       /**** Private functions ****/
       _ignoreNextOnError: function() {
         var self = this;
@@ -991,17 +991,17 @@
           self._ignoreOnError -= 1;
         });
       },
-    
+
       _triggerEvent: function(eventType, options) {
         // NOTE: `event` is a native browser thing, so let's avoid conflicting wiht it
         var evt, key;
-    
+
         if (!this._hasDocument) return;
-    
+
         options = options || {};
-    
+
         eventType = 'raven' + eventType.substr(0, 1).toUpperCase() + eventType.substr(1);
-    
+
         if (_document.createEvent) {
           evt = _document.createEvent('HTMLEvents');
           evt.initEvent(eventType, true, true);
@@ -1009,12 +1009,12 @@
           evt = _document.createEventObject();
           evt.eventType = eventType;
         }
-    
+
         for (key in options)
           if (hasKey(options, key)) {
             evt[key] = options[key];
           }
-    
+
         if (_document.createEvent) {
           // IE9 if standards
           _document.dispatchEvent(evt);
@@ -1028,7 +1028,7 @@
           }
         }
       },
-    
+
       /**
        * Wraps addEventListener to capture UI breadcrumbs
        * @param evtName the event name (e.g. "click")
@@ -1042,14 +1042,14 @@
           // a 'keypress' will reset the keypress debounce so that a new
           // set of keypresses can be recorded
           self._keypressTimeout = null;
-    
+
           // It's possible this handler might trigger multiple times for the same
           // event (e.g. event propagation through node ancestors). Ignore if we've
           // already captured the event.
           if (self._lastCapturedEvent === evt) return;
-    
+
           self._lastCapturedEvent = evt;
-    
+
           // try/catch both:
           // - accessing evt.target (see getsentry/raven-js#838, #768)
           // - `htmlTreeAsString` because it's complex, and just accessing the DOM incorrectly
@@ -1060,14 +1060,14 @@
           } catch (e) {
             target = '<unknown>';
           }
-    
+
           self.captureBreadcrumb({
             category: 'ui.' + evtName, // e.g. ui.click, ui.input
             message: target
           });
         };
       },
-    
+
       /**
        * Wraps addEventListener to capture keypress UI events
        * @returns {Function}
@@ -1076,7 +1076,7 @@
       _keypressEventHandler: function() {
         var self = this,
           debounceDuration = 1000; // milliseconds
-    
+
         // TODO: if somehow user switches keypress target before
         //       debounce timeout is triggered, we will only capture
         //       a single breadcrumb from the FIRST target (acceptable?)
@@ -1090,7 +1090,7 @@
             return;
           }
           var tagName = target && target.tagName;
-    
+
           // only consider keypress events on actual input elements
           // this will disregard keypresses targeting body (e.g. tabbing
           // through elements, hotkeys, etc)
@@ -1099,7 +1099,7 @@
             (tagName !== 'INPUT' && tagName !== 'TEXTAREA' && !target.isContentEditable)
           )
             return;
-    
+
           // record first keypress in a series, but ignore subsequent
           // keypresses until debounce clears
           var timeout = self._keypressTimeout;
@@ -1112,7 +1112,7 @@
           }, debounceDuration);
         };
       },
-    
+
       /**
        * Captures a breadcrumb of type "navigation", normalizing input URLs
        * @param to the originating URL
@@ -1123,19 +1123,19 @@
         var parsedLoc = parseUrl(this._location.href);
         var parsedTo = parseUrl(to);
         var parsedFrom = parseUrl(from);
-    
+
         // because onpopstate only tells you the "new" (to) value of location.href, and
         // not the previous (from) value, we need to track the value of the current URL
         // state ourselves
         this._lastHref = to;
-    
+
         // Use only the path component of the URL if the URL matches the current
         // document (almost all the time when using pushState)
         if (parsedLoc.protocol === parsedTo.protocol && parsedLoc.host === parsedTo.host)
           to = parsedTo.relative;
         if (parsedLoc.protocol === parsedFrom.protocol && parsedLoc.host === parsedFrom.host)
           from = parsedFrom.relative;
-    
+
         this.captureBreadcrumb({
           category: 'navigation',
           data: {
@@ -1144,7 +1144,7 @@
           }
         });
       },
-    
+
       _patchFunctionToString: function() {
         var self = this;
         self._originalFunctionToString = Function.prototype.toString;
@@ -1156,23 +1156,23 @@
           return self._originalFunctionToString.apply(this, arguments);
         };
       },
-    
+
       _unpatchFunctionToString: function() {
         if (this._originalFunctionToString) {
           // eslint-disable-next-line no-extend-native
           Function.prototype.toString = this._originalFunctionToString;
         }
       },
-    
+
       /**
        * Wrap timer functions and event targets to catch errors and provide
        * better metadata.
        */
       _instrumentTryCatch: function() {
         var self = this;
-    
+
         var wrappedBuiltIns = self._wrappedBuiltIns;
-    
+
         function wrapTimeFn(orig) {
           return function(fn, t) {
             // preserve arity
@@ -1194,7 +1194,7 @@
                 originalCallback
               );
             }
-    
+
             // IE < 9 doesn't support .call/.apply on setInterval/setTimeout, but it
             // also supports only two arguments and doesn't care what this is, so we
             // can just call the original function directly.
@@ -1205,9 +1205,9 @@
             }
           };
         }
-    
+
         var autoBreadcrumbs = this._globalOptions.autoBreadcrumbs;
-    
+
         function wrapEventTarget(global) {
           var proto = _window[global] && _window[global].prototype;
           if (proto && proto.hasOwnProperty && proto.hasOwnProperty('addEventListener')) {
@@ -1236,11 +1236,11 @@
                   } catch (err) {
                     // can sometimes get 'Permission denied to access property "handle Event'
                   }
-    
+
                   // More breadcrumb DOM capture ... done here and not in `_instrumentBreadcrumbs`
                   // so that we don't have more than one wrapper function
                   var before, clickHandler, keypressHandler;
-    
+
                   if (
                     autoBreadcrumbs &&
                     autoBreadcrumbs.dom &&
@@ -1255,7 +1255,7 @@
                       // same wrapped method is re-used for different events (e.g. mousemove THEN click)
                       // see #724
                       if (!evt) return;
-    
+
                       var eventType;
                       try {
                         eventType = evt.type;
@@ -1309,7 +1309,7 @@
             );
           }
         }
-    
+
         fill(_window, 'setTimeout', wrapTimeFn, wrappedBuiltIns);
         fill(_window, 'setInterval', wrapTimeFn, wrappedBuiltIns);
         if (_window.requestAnimationFrame) {
@@ -1337,7 +1337,7 @@
             wrappedBuiltIns
           );
         }
-    
+
         // event targets borrowed from bugsnag-js:
         // https://github.com/bugsnag/bugsnag-js/blob/master/src/bugsnag.js#L666
         var eventTargets = [
@@ -1375,7 +1375,7 @@
           wrapEventTarget(eventTargets[i]);
         }
       },
-    
+
       /**
        * Instrument browser built-ins w/ breadcrumb capturing
        *  - XMLHttpRequests
@@ -1388,9 +1388,9 @@
       _instrumentBreadcrumbs: function() {
         var self = this;
         var autoBreadcrumbs = this._globalOptions.autoBreadcrumbs;
-    
+
         var wrappedBuiltIns = self._wrappedBuiltIns;
-    
+
         function wrapProp(prop, xhr) {
           if (prop in xhr && isFunction(xhr[prop])) {
             fill(xhr, prop, function(orig) {
@@ -1406,7 +1406,7 @@
             }); // intentionally don't track filled methods on XHR instances
           }
         }
-    
+
         if (autoBreadcrumbs.xhr && 'XMLHttpRequest' in _window) {
           var xhrproto = _window.XMLHttpRequest && _window.XMLHttpRequest.prototype;
           fill(
@@ -1415,7 +1415,7 @@
             function(origOpen) {
               return function(method, url) {
                 // preserve arity
-    
+
                 // if Sentry key appears in URL, don't capture
                 if (isString(url) && url.indexOf(self._globalKey) === -1) {
                   this.__raven_xhr = {
@@ -1424,13 +1424,13 @@
                     status_code: null
                   };
                 }
-    
+
                 return origOpen.apply(this, arguments);
               };
             },
             wrappedBuiltIns
           );
-    
+
           fill(
             xhrproto,
             'send',
@@ -1438,7 +1438,7 @@
               return function() {
                 // preserve arity
                 var xhr = this;
-    
+
                 function onreadystatechangeHandler() {
                   if (xhr.__raven_xhr && xhr.readyState === 4) {
                     try {
@@ -1448,7 +1448,7 @@
                     } catch (e) {
                       /* do nothing */
                     }
-    
+
                     self.captureBreadcrumb({
                       type: 'http',
                       category: 'xhr',
@@ -1456,12 +1456,12 @@
                     });
                   }
                 }
-    
+
                 var props = ['onload', 'onerror', 'onprogress'];
                 for (var j = 0; j < props.length; j++) {
                   wrapProp(props[j], xhr);
                 }
-    
+
                 if ('onreadystatechange' in xhr && isFunction(xhr.onreadystatechange)) {
                   fill(
                     xhr,
@@ -1487,14 +1487,14 @@
                   // are free to set our own and capture the breadcrumb
                   xhr.onreadystatechange = onreadystatechangeHandler;
                 }
-    
+
                 return origSend.apply(this, arguments);
               };
             },
             wrappedBuiltIns
           );
         }
-    
+
         if (autoBreadcrumbs.xhr && supportsFetch()) {
           fill(
             _window,
@@ -1508,11 +1508,11 @@
                 for (var i = 0; i < args.length; ++i) {
                   args[i] = arguments[i];
                 }
-    
+
                 var fetchInput = args[0];
                 var method = 'GET';
                 var url;
-    
+
                 if (typeof fetchInput === 'string') {
                   url = fetchInput;
                 } else if ('Request' in _window && fetchInput instanceof _window.Request) {
@@ -1523,33 +1523,33 @@
                 } else {
                   url = '' + fetchInput;
                 }
-    
+
                 // if Sentry key appears in URL, don't capture, as it's our own request
                 if (url.indexOf(self._globalKey) !== -1) {
                   return origFetch.apply(this, args);
                 }
-    
+
                 if (args[1] && args[1].method) {
                   method = args[1].method;
                 }
-    
+
                 var fetchData = {
                   method: method,
                   url: url,
                   status_code: null
                 };
-    
+
                 return origFetch
                   .apply(this, args)
                   .then(function(response) {
                     fetchData.status_code = response.status;
-    
+
                     self.captureBreadcrumb({
                       type: 'http',
                       category: 'fetch',
                       data: fetchData
                     });
-    
+
                     return response;
                   })
                   ['catch'](function(err) {
@@ -1560,7 +1560,7 @@
                       data: fetchData,
                       level: 'error'
                     });
-    
+
                     throw err;
                   });
               };
@@ -1568,7 +1568,7 @@
             wrappedBuiltIns
           );
         }
-    
+
         // Capture breadcrumbs from any click that is unhandled / bubbled up all the way
         // to the document. Do this before we instrument addEventListener.
         if (autoBreadcrumbs.dom && this._hasDocument) {
@@ -1581,7 +1581,7 @@
             _document.attachEvent('onkeypress', self._keypressEventHandler());
           }
         }
-    
+
         // record navigation (URL) changes
         // NOTE: in Chrome App environment, touching history.pushState, *even inside
         //       a try/catch block*, will cause Chrome to output an error to console.error
@@ -1599,32 +1599,32 @@
           _window.onpopstate = function() {
             var currentHref = self._location.href;
             self._captureUrlChange(self._lastHref, currentHref);
-    
+
             if (oldOnPopState) {
               return oldOnPopState.apply(this, arguments);
             }
           };
-    
+
           var historyReplacementFunction = function(origHistFunction) {
             // note history.pushState.length is 0; intentionally not declaring
             // params to preserve 0 arity
             return function(/* state, title, url */) {
               var url = arguments.length > 2 ? arguments[2] : undefined;
-    
+
               // url argument is optional
               if (url) {
                 // coerce to string (this is what pushState does)
                 self._captureUrlChange(self._lastHref, url + '');
               }
-    
+
               return origHistFunction.apply(this, arguments);
             };
           };
-    
+
           fill(_window.history, 'pushState', historyReplacementFunction, wrappedBuiltIns);
           fill(_window.history, 'replaceState', historyReplacementFunction, wrappedBuiltIns);
         }
-    
+
         if (autoBreadcrumbs.console && 'console' in _window && console.log) {
           // console
           var consoleMethodCallback = function(msg, data) {
@@ -1634,37 +1634,37 @@
               category: 'console'
             });
           };
-    
+
           each(['debug', 'info', 'warn', 'error', 'log'], function(_, level) {
             wrapConsoleMethod(console, level, consoleMethodCallback);
           });
         }
       },
-    
+
       _restoreBuiltIns: function() {
         // restore any wrapped builtins
         var builtin;
         while (this._wrappedBuiltIns.length) {
           builtin = this._wrappedBuiltIns.shift();
-    
+
           var obj = builtin[0],
             name = builtin[1],
             orig = builtin[2];
-    
+
           obj[name] = orig;
         }
       },
-    
+
       _restoreConsole: function() {
         // eslint-disable-next-line guard-for-in
         for (var method in this._originalConsoleMethods) {
           this._originalConsole[method] = this._originalConsoleMethods[method];
         }
       },
-    
+
       _drainPlugins: function() {
         var self = this;
-    
+
         // FIX ME TODO
         each(this._plugins, function(_, plugin) {
           var installer = plugin[0];
@@ -1672,58 +1672,58 @@
           installer.apply(self, [self].concat(args));
         });
       },
-    
+
       _parseDSN: function(str) {
         var m = dsnPattern.exec(str),
           dsn = {},
           i = 7;
-    
+
         try {
           while (i--) dsn[dsnKeys[i]] = m[i] || '';
         } catch (e) {
           throw new RavenConfigError('Invalid DSN: ' + str);
         }
-    
+
         if (dsn.pass && !this._globalOptions.allowSecretKey) {
           throw new RavenConfigError(
             'Do not specify your secret key in the DSN. See: http://bit.ly/raven-secret-key'
           );
         }
-    
+
         return dsn;
       },
-    
+
       _getGlobalServer: function(uri) {
         // assemble the endpoint from the uri pieces
         var globalServer = '//' + uri.host + (uri.port ? ':' + uri.port : '');
-    
+
         if (uri.protocol) {
           globalServer = uri.protocol + ':' + globalServer;
         }
         return globalServer;
       },
-    
+
       _handleOnErrorStackInfo: function(stackInfo, options) {
         options = options || {};
         options.mechanism = options.mechanism || {
           type: 'onerror',
           handled: false
         };
-    
+
         // if we are intentionally ignoring errors via onerror, bail out
         if (!this._ignoreOnError) {
           this._handleStackInfo(stackInfo, options);
         }
       },
-    
+
       _handleStackInfo: function(stackInfo, options) {
         var frames = this._prepareFrames(stackInfo, options);
-    
+
         this._triggerEvent('handle', {
           stackInfo: stackInfo,
           options: options
         });
-    
+
         this._processException(
           stackInfo.name,
           stackInfo.message,
@@ -1733,7 +1733,7 @@
           options
         );
       },
-    
+
       _prepareFrames: function(stackInfo, options) {
         var self = this;
         var frames = [];
@@ -1744,7 +1744,7 @@
               frames.push(frame);
             }
           });
-    
+
           // e.g. frames captured via captureMessage throw
           if (options && options.trimHeadFrames) {
             for (var j = 0; j < options.trimHeadFrames && j < frames.length; j++) {
@@ -1755,7 +1755,7 @@
         frames = frames.slice(0, this._globalOptions.stackTraceLimit);
         return frames;
       },
-    
+
       _normalizeFrame: function(frame, stackInfoUrl) {
         // normalize the frames data
         var normalized = {
@@ -1764,7 +1764,7 @@
           colno: frame.column,
           function: frame.func || '?'
         };
-    
+
         // Case when we don't have any information about the error
         // E.g. throwing a string or raw object, instead of an `Error` in Firefox
         // Generating synthetic error doesn't add any value here
@@ -1773,7 +1773,7 @@
         if (!frame.url) {
           normalized.filename = stackInfoUrl; // fallback to whole stacks url from onerror handler
         }
-    
+
         normalized.in_app = !// determine if an exception came from outside of our app
         // first we check the global includePaths list.
         (
@@ -1784,10 +1784,10 @@
           // finally, we do a last ditch effort and check for raven.min.js
           /raven\.(min\.)?js$/.test(normalized.filename)
         );
-    
+
         return normalized;
       },
-    
+
       _processException: function(type, message, fileurl, lineno, frames, options) {
         var prefixedMessage = (type ? type + ': ' : '') + (message || '');
         if (
@@ -1797,9 +1797,9 @@
         ) {
           return;
         }
-    
+
         var stacktrace;
-    
+
         if (frames && frames.length) {
           fileurl = frames[0].filename || fileurl;
           // Sentry expects frames oldest to newest
@@ -1817,21 +1817,21 @@
             ]
           };
         }
-    
+
         if (
           !!this._globalOptions.ignoreUrls.test &&
           this._globalOptions.ignoreUrls.test(fileurl)
         ) {
           return;
         }
-    
+
         if (
           !!this._globalOptions.whitelistUrls.test &&
           !this._globalOptions.whitelistUrls.test(fileurl)
         ) {
           return;
         }
-    
+
         var data = objectMerge(
           {
             // sentry.interfaces.Exception
@@ -1848,12 +1848,12 @@
           },
           options
         );
-    
+
         var ex = data.exception.values[0];
         if (ex.type == null && ex.value === '') {
           ex.value = 'Unrecoverable error caught';
         }
-    
+
         // Move mechanism from options to exception interface
         // We do this, as requiring user to pass `{exception:{mechanism:{ ... }}}` would be
         // too much
@@ -1861,7 +1861,7 @@
           data.exception.mechanism = data.mechanism;
           delete data.mechanism;
         }
-    
+
         data.exception.mechanism = objectMerge(
           {
             type: 'generic',
@@ -1869,11 +1869,11 @@
           },
           data.exception.mechanism || {}
         );
-    
+
         // Fire away!
         this._send(data);
       },
-    
+
       _trimPacket: function(data) {
         // For now, we only want to truncate the two different messages
         // but this could/should be expanded to just trim everything
@@ -1885,7 +1885,7 @@
           var exception = data.exception.values[0];
           exception.value = truncate(exception.value, max);
         }
-    
+
         var request = data.request;
         if (request) {
           if (request.url) {
@@ -1895,13 +1895,13 @@
             request.Referer = truncate(request.Referer, this._globalOptions.maxUrlLength);
           }
         }
-    
+
         if (data.breadcrumbs && data.breadcrumbs.values)
           this._trimBreadcrumbs(data.breadcrumbs);
-    
+
         return data;
       },
-    
+
       /**
        * Truncate breadcrumb values (right now just URLs)
        */
@@ -1912,7 +1912,7 @@
           urlProp,
           crumb,
           data;
-    
+
         for (var i = 0; i < breadcrumbs.values.length; ++i) {
           crumb = breadcrumbs.values[i];
           if (
@@ -1921,7 +1921,7 @@
             objectFrozen(crumb.data)
           )
             continue;
-    
+
           data = objectMerge({}, crumb.data);
           for (var j = 0; j < urlProps.length; ++j) {
             urlProp = urlProps[j];
@@ -1932,39 +1932,39 @@
           breadcrumbs.values[i].data = data;
         }
       },
-    
+
       _getHttpData: function() {
         if (!this._hasNavigator && !this._hasDocument) return;
         var httpData = {};
-    
+
         if (this._hasNavigator && _navigator.userAgent) {
           httpData.headers = {
             'User-Agent': _navigator.userAgent
           };
         }
-    
+
         // Check in `window` instead of `document`, as we may be in ServiceWorker environment
         if (_window.location && _window.location.href) {
           httpData.url = _window.location.href;
         }
-    
+
         if (this._hasDocument && _document.referrer) {
           if (!httpData.headers) httpData.headers = {};
           httpData.headers.Referer = _document.referrer;
         }
-    
+
         return httpData;
       },
-    
+
       _resetBackoff: function() {
         this._backoffDuration = 0;
         this._backoffStart = null;
       },
-    
+
       _shouldBackoff: function() {
         return this._backoffDuration && now() - this._backoffStart < this._backoffDuration;
       },
-    
+
       /**
        * Returns true if the in-process data payload matches the signature
        * of the previously-sent data
@@ -1976,14 +1976,14 @@
        */
       _isRepeatData: function(current) {
         var last = this._lastData;
-    
+
         if (
           !last ||
           current.message !== last.message || // defined for captureMessage
           current.transaction !== last.transaction // defined for captureException/onerror
         )
           return false;
-    
+
         // Stacktrace interface (i.e. from captureMessage)
         if (current.stacktrace || last.stacktrace) {
           return isSameStacktrace(current.stacktrace, last.stacktrace);
@@ -1991,23 +1991,23 @@
           // Exception interface (i.e. from captureException/onerror)
           return isSameException(current.exception, last.exception);
         }
-    
+
         return true;
       },
-    
+
       _setBackoffState: function(request) {
         // If we are already in a backoff state, don't change anything
         if (this._shouldBackoff()) {
           return;
         }
-    
+
         var status = request.status;
-    
+
         // 400 - project_id doesn't exist or some other fatal
         // 401 - invalid/revoked dsn
         // 429 - too many requests
         if (!(status === 400 || status === 401 || status === 429)) return;
-    
+
         var retry;
         try {
           // If Retry-After is not in Access-Control-Expose-Headers, most
@@ -2017,48 +2017,48 @@
           } else {
             retry = request.getResponseHeader('Retry-After');
           }
-    
+
           // Retry-After is returned in seconds
           retry = parseInt(retry, 10) * 1000;
         } catch (e) {
           /* eslint no-empty:0 */
         }
-    
+
         this._backoffDuration = retry
           ? // If Sentry server returned a Retry-After value, use it
             retry
           : // Otherwise, double the last backoff duration (starts at 1 sec)
             this._backoffDuration * 2 || 1000;
-    
+
         this._backoffStart = now();
       },
-    
+
       _send: function(data) {
         var globalOptions = this._globalOptions;
-    
+
         var baseData = {
             project: this._globalProject,
             logger: globalOptions.logger,
             platform: 'javascript'
           },
           httpData = this._getHttpData();
-    
+
         if (httpData) {
           baseData.request = httpData;
         }
-    
+
         // HACK: delete `trimHeadFrames` to prevent from appearing in outbound payload
         if (data.trimHeadFrames) delete data.trimHeadFrames;
-    
+
         data = objectMerge(baseData, data);
-    
+
         // Merge in the tags and extra separately since objectMerge doesn't handle a deep merge
         data.tags = objectMerge(objectMerge({}, this._globalContext.tags), data.tags);
         data.extra = objectMerge(objectMerge({}, this._globalContext.extra), data.extra);
-    
+
         // Send along our own collected metadata with extra
         data.extra['session:duration'] = now() - this._startTime;
-    
+
         if (this._breadcrumbs && this._breadcrumbs.length > 0) {
           // intentionally make shallow copy so that additions
           // to breadcrumbs aren't accidentally sent in this request
@@ -2066,39 +2066,39 @@
             values: [].slice.call(this._breadcrumbs, 0)
           };
         }
-    
+
         if (this._globalContext.user) {
           // sentry.interfaces.User
           data.user = this._globalContext.user;
         }
-    
+
         // Include the environment if it's defined in globalOptions
         if (globalOptions.environment) data.environment = globalOptions.environment;
-    
+
         // Include the release if it's defined in globalOptions
         if (globalOptions.release) data.release = globalOptions.release;
-    
+
         // Include server_name if it's defined in globalOptions
         if (globalOptions.serverName) data.server_name = globalOptions.serverName;
-    
+
         data = this._sanitizeData(data);
-    
+
         // Cleanup empty properties before sending them to the server
         Object.keys(data).forEach(function(key) {
           if (data[key] == null || data[key] === '' || isEmptyObject(data[key])) {
             delete data[key];
           }
         });
-    
+
         if (isFunction(globalOptions.dataCallback)) {
           data = globalOptions.dataCallback(data) || data;
         }
-    
+
         // Why??????????
         if (!data || isEmptyObject(data)) {
           return;
         }
-    
+
         // Check if the request should be filtered or not
         if (
           isFunction(globalOptions.shouldSendCallback) &&
@@ -2106,14 +2106,14 @@
         ) {
           return;
         }
-    
+
         // Backoff state: Sentry server previously responded w/ an error (e.g. 429 - too many requests),
         // so drop requests until "cool-off" period has elapsed.
         if (this._shouldBackoff()) {
           this._logDebug('warn', 'Raven dropped error due to backoff: ', data);
           return;
         }
-    
+
         if (typeof globalOptions.sampleRate === 'number') {
           if (Math.random() < globalOptions.sampleRate) {
             this._sendProcessedPayload(data);
@@ -2122,24 +2122,24 @@
           this._sendProcessedPayload(data);
         }
       },
-    
+
       _sanitizeData: function(data) {
         return sanitize(data, this._globalOptions.sanitizeKeys);
       },
-    
+
       _getUuid: function() {
         return uuid4();
       },
-    
+
       _sendProcessedPayload: function(data, callback) {
         var self = this;
         var globalOptions = this._globalOptions;
-    
+
         if (!this.isSetup()) return;
-    
+
         // Try and clean up the packet before sending by truncating long values
         data = this._trimPacket(data);
-    
+
         // ideally duplicate error testing should occur *before* dataCallback/shouldSendCallback,
         // but this would require copying an un-truncated copy of the data packet, which can be
         // arbitrarily deep (extra_data) -- could be worthwhile? will revisit
@@ -2147,29 +2147,29 @@
           this._logDebug('warn', 'Raven dropped repeat event: ', data);
           return;
         }
-    
+
         // Send along an event_id if not explicitly passed.
         // This event_id can be used to reference the error within Sentry itself.
         // Set lastEventId after we know the error should actually be sent
         this._lastEventId = data.event_id || (data.event_id = this._getUuid());
-    
+
         // Store outbound payload after trim
         this._lastData = data;
-    
+
         this._logDebug('debug', 'Raven about to send:', data);
-    
+
         var auth = {
           sentry_version: '7',
           sentry_client: 'raven-js/' + this.VERSION,
           sentry_key: this._globalKey
         };
-    
+
         if (this._globalSecret) {
           auth.sentry_secret = this._globalSecret;
         }
-    
+
         var exception = data.exception && data.exception.values[0];
-    
+
         // only capture 'sentry' breadcrumb is autoBreadcrumbs is truthy
         if (
           this._globalOptions.autoBreadcrumbs &&
@@ -2184,7 +2184,7 @@
             level: data.level || 'error' // presume error unless specified
           });
         }
-    
+
         var url = this._globalEndpoint;
         (globalOptions.transport || this._makeRequest).call(this, {
           url: url,
@@ -2193,7 +2193,7 @@
           options: globalOptions,
           onSuccess: function success() {
             self._resetBackoff();
-    
+
             self._triggerEvent('success', {
               data: data,
               src: url
@@ -2202,11 +2202,11 @@
           },
           onError: function failure(error) {
             self._logDebug('error', 'Raven transport failed to send: ', error);
-    
+
             if (error.request) {
               self._setBackoffState(error.request);
             }
-    
+
             self._triggerEvent('failure', {
               data: data,
               src: url
@@ -2216,32 +2216,32 @@
           }
         });
       },
-    
+
       _makeRequest: function(opts) {
         // Auth is intentionally sent as part of query string (NOT as custom HTTP header) to avoid preflight CORS requests
         var url = opts.url + '?' + urlencode(opts.auth);
-    
+
         var evaluatedHeaders = null;
         var evaluatedFetchParameters = {};
-    
+
         if (opts.options.headers) {
           evaluatedHeaders = this._evaluateHash(opts.options.headers);
         }
-    
+
         if (opts.options.fetchParameters) {
           evaluatedFetchParameters = this._evaluateHash(opts.options.fetchParameters);
         }
-    
+
         if (supportsFetch()) {
           evaluatedFetchParameters.body = stringify(opts.data);
-    
+
           var defaultFetchOptions = objectMerge({}, this._fetchDefaults);
           var fetchOptions = objectMerge(defaultFetchOptions, evaluatedFetchParameters);
-    
+
           if (evaluatedHeaders) {
             fetchOptions.headers = evaluatedHeaders;
           }
-    
+
           return _window
             .fetch(url, fetchOptions)
             .then(function(response) {
@@ -2260,15 +2260,15 @@
                 opts.onError(new Error('Sentry error code: network unavailable'));
             });
         }
-    
+
         var request = _window.XMLHttpRequest && new _window.XMLHttpRequest();
         if (!request) return;
-    
+
         // if browser doesn't support CORS (e.g. IE7), we are out of luck
         var hasCORS = 'withCredentials' in request || typeof XDomainRequest !== 'undefined';
-    
+
         if (!hasCORS) return;
-    
+
         if ('withCredentials' in request) {
           request.onreadystatechange = function() {
             if (request.readyState !== 4) {
@@ -2286,7 +2286,7 @@
           // xdomainrequest cannot go http -> https (or vice versa),
           // so always use protocol relative
           url = url.replace(/^https?:/, '');
-    
+
           // onreadystatechange not supported by XDomainRequest
           if (opts.onSuccess) {
             request.onload = opts.onSuccess;
@@ -2299,31 +2299,31 @@
             };
           }
         }
-    
+
         request.open('POST', url);
-    
+
         if (evaluatedHeaders) {
           each(evaluatedHeaders, function(key, value) {
             request.setRequestHeader(key, value);
           });
         }
-    
+
         request.send(stringify(opts.data));
       },
-    
+
       _evaluateHash: function(hash) {
         var evaluated = {};
-    
+
         for (var key in hash) {
           if (hash.hasOwnProperty(key)) {
             var value = hash[key];
             evaluated[key] = typeof value === 'function' ? value() : value;
           }
         }
-    
+
         return evaluated;
       },
-    
+
       _logDebug: function(level) {
         // We allow `Raven.debug` and `Raven.config(DSN, { debug: true })` to not make backward incompatible API change
         if (
@@ -2338,7 +2338,7 @@
           );
         }
       },
-    
+
       _mergeContext: function(key, context) {
         if (isUndefined(context)) {
           delete this._globalContext[key];
@@ -2347,13 +2347,13 @@
         }
       }
     };
-    
+
     // Deprecations
     Raven.prototype.setUser = Raven.prototype.setUserContext;
     Raven.prototype.setReleaseContext = Raven.prototype.setRelease;
-    
+
     module.exports = Raven;
-    
+
     }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
     },{"1":1,"2":2,"5":5,"6":6,"7":7,"8":8}],4:[function(_dereq_,module,exports){
     (function (global){
@@ -2362,18 +2362,18 @@
      * main entry point for Raven. If you are a consumer of the
      * Raven library, you SHOULD load this file (vs raven.js).
      **/
-    
+
     var RavenConstructor = _dereq_(3);
-    
+
     // This is to be defensive in environments where window does not exist (see https://github.com/getsentry/raven-js/pull/785)
     var _window =
       typeof window !== 'undefined'
         ? window
         : typeof global !== 'undefined' ? global : typeof self !== 'undefined' ? self : {};
     var _Raven = _window.Raven;
-    
+
     var Raven = new RavenConstructor();
-    
+
     /*
      * Allow multiple versions of Raven to be installed.
      * Strip Raven from the global context and returns the instance.
@@ -2384,11 +2384,11 @@
       _window.Raven = _Raven;
       return Raven;
     };
-    
+
     Raven.afterLoad();
-    
+
     module.exports = Raven;
-    
+
     /**
      * DISCLAIMER:
      *
@@ -2424,12 +2424,12 @@
      * It should "just work".
      */
     module.exports.Client = RavenConstructor;
-    
+
     }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
     },{"3":3}],5:[function(_dereq_,module,exports){
     (function (global){
     var stringify = _dereq_(7);
-    
+
     var _window =
       typeof window !== 'undefined'
         ? window
@@ -2438,11 +2438,11 @@
           : typeof self !== 'undefined'
             ? self
             : {};
-    
+
     function isObject(what) {
       return typeof what === 'object' && what !== null;
     }
-    
+
     // Yanked from https://git.io/vS8DV re-used under CC0
     // with some tiny modifications
     function isError(value) {
@@ -2457,42 +2457,42 @@
           return value instanceof Error;
       }
     }
-    
+
     function isErrorEvent(value) {
       return Object.prototype.toString.call(value) === '[object ErrorEvent]';
     }
-    
+
     function isDOMError(value) {
       return Object.prototype.toString.call(value) === '[object DOMError]';
     }
-    
+
     function isDOMException(value) {
       return Object.prototype.toString.call(value) === '[object DOMException]';
     }
-    
+
     function isUndefined(what) {
       return what === void 0;
     }
-    
+
     function isFunction(what) {
       return typeof what === 'function';
     }
-    
+
     function isPlainObject(what) {
       return Object.prototype.toString.call(what) === '[object Object]';
     }
-    
+
     function isString(what) {
       return Object.prototype.toString.call(what) === '[object String]';
     }
-    
+
     function isArray(what) {
       return Object.prototype.toString.call(what) === '[object Array]';
     }
-    
+
     function isEmptyObject(what) {
       if (!isPlainObject(what)) return false;
-    
+
       for (var _ in what) {
         if (what.hasOwnProperty(_)) {
           return false;
@@ -2500,7 +2500,7 @@
       }
       return true;
     }
-    
+
     function supportsErrorEvent() {
       try {
         new ErrorEvent(''); // eslint-disable-line no-new
@@ -2509,7 +2509,7 @@
         return false;
       }
     }
-    
+
     function supportsDOMError() {
       try {
         new DOMError(''); // eslint-disable-line no-new
@@ -2518,7 +2518,7 @@
         return false;
       }
     }
-    
+
     function supportsDOMException() {
       try {
         new DOMException(''); // eslint-disable-line no-new
@@ -2527,10 +2527,10 @@
         return false;
       }
     }
-    
+
     function supportsFetch() {
       if (!('fetch' in _window)) return false;
-    
+
       try {
         new Headers(); // eslint-disable-line no-new
         new Request(''); // eslint-disable-line no-new
@@ -2540,14 +2540,14 @@
         return false;
       }
     }
-    
+
     // Despite all stars in the sky saying that Edge supports old draft syntax, aka 'never', 'always', 'origin' and 'default
     // https://caniuse.com/#feat=referrer-policy
     // It doesn't. And it throw exception instead of ignoring this parameter...
     // REF: https://github.com/getsentry/raven-js/issues/1233
     function supportsReferrerPolicy() {
       if (!supportsFetch()) return false;
-    
+
       try {
         // eslint-disable-next-line no-new
         new Request('pickleRick', {
@@ -2558,11 +2558,11 @@
         return false;
       }
     }
-    
+
     function supportsPromiseRejectionEvent() {
       return typeof PromiseRejectionEvent === 'function';
     }
-    
+
     function wrappedCallback(callback) {
       function dataCallback(data, original) {
         var normalizedData = callback(data) || data;
@@ -2571,13 +2571,13 @@
         }
         return normalizedData;
       }
-    
+
       return dataCallback;
     }
-    
+
     function each(obj, callback) {
       var i, j;
-    
+
       if (isUndefined(obj.length)) {
         for (i in obj) {
           if (hasKey(obj, i)) {
@@ -2593,7 +2593,7 @@
         }
       }
     }
-    
+
     function objectMerge(obj1, obj2) {
       if (!obj2) {
         return obj1;
@@ -2603,7 +2603,7 @@
       });
       return obj1;
     }
-    
+
     /**
      * This function is only used for react-native.
      * react-native freezes object that have already been sent over the
@@ -2618,7 +2618,7 @@
       }
       return Object.isFrozen(obj);
     }
-    
+
     function truncate(str, max) {
       if (typeof max !== 'number') {
         throw new Error('2nd argument to `truncate` function should be a number');
@@ -2628,7 +2628,7 @@
       }
       return str.length <= max ? str : str.substr(0, max) + '\u2026';
     }
-    
+
     /**
      * hasKey, a better form of hasOwnProperty
      * Example: hasKey(MainHostObject, property) === true/false
@@ -2639,7 +2639,7 @@
     function hasKey(object, key) {
       return Object.prototype.hasOwnProperty.call(object, key);
     }
-    
+
     function joinRegExp(patterns) {
       // Combine an array of regular expressions and strings into one large regexp
       // Be mad.
@@ -2647,7 +2647,7 @@
         i = 0,
         len = patterns.length,
         pattern;
-    
+
       for (; i < len; i++) {
         pattern = patterns[i];
         if (isString(pattern)) {
@@ -2662,7 +2662,7 @@
       }
       return new RegExp(sources.join('|'), 'i');
     }
-    
+
     function urlencode(o) {
       var pairs = [];
       each(o, function(key, value) {
@@ -2670,14 +2670,14 @@
       });
       return pairs.join('&');
     }
-    
+
     // borrowed from https://tools.ietf.org/html/rfc3986#appendix-B
     // intentionally using regex and not <a/> href parsing trick because React Native and other
     // environments where DOM might not be available
     function parseUrl(url) {
       if (typeof url !== 'string') return {};
       var match = url.match(/^(([^:\/?#]+):)?(\/\/([^\/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?$/);
-    
+
       // coerce to undefined values to empty string so we don't get 'undefined'
       var query = match[6] || '';
       var fragment = match[8] || '';
@@ -2690,18 +2690,18 @@
     }
     function uuid4() {
       var crypto = _window.crypto || _window.msCrypto;
-    
+
       if (!isUndefined(crypto) && crypto.getRandomValues) {
         // Use window.crypto API if available
         // eslint-disable-next-line no-undef
         var arr = new Uint16Array(8);
         crypto.getRandomValues(arr);
-    
+
         // set 4 in byte 7
         arr[3] = (arr[3] & 0xfff) | 0x4000;
         // set 2 most significant bits of byte 9 to '10'
         arr[4] = (arr[4] & 0x3fff) | 0x8000;
-    
+
         var pad = function(num) {
           var v = num.toString(16);
           while (v.length < 4) {
@@ -2709,7 +2709,7 @@
           }
           return v;
         };
-    
+
         return (
           pad(arr[0]) +
           pad(arr[1]) +
@@ -2729,7 +2729,7 @@
         });
       }
     }
-    
+
     /**
      * Given a child DOM element, returns a query-selector statement describing that
      * and its ancestors
@@ -2747,7 +2747,7 @@
         separator = ' > ',
         sepLength = separator.length,
         nextStr;
-    
+
       while (elem && height++ < MAX_TRAVERSE_HEIGHT) {
         nextStr = htmlElementAsString(elem);
         // bail out if
@@ -2760,16 +2760,16 @@
         ) {
           break;
         }
-    
+
         out.push(nextStr);
-    
+
         len += nextStr.length;
         elem = elem.parentNode;
       }
-    
+
       return out.reverse().join(separator);
     }
-    
+
     /**
      * Returns a simple, query-selector representation of a DOM element
      * e.g. [HTMLElement] => input#foo.btn[name=baz]
@@ -2783,16 +2783,16 @@
         key,
         attr,
         i;
-    
+
       if (!elem || !elem.tagName) {
         return '';
       }
-    
+
       out.push(elem.tagName.toLowerCase());
       if (elem.id) {
         out.push('#' + elem.id);
       }
-    
+
       className = elem.className;
       if (className && isString(className)) {
         classes = className.split(/\s+/);
@@ -2810,53 +2810,53 @@
       }
       return out.join('');
     }
-    
+
     /**
      * Returns true if either a OR b is truthy, but not both
      */
     function isOnlyOneTruthy(a, b) {
       return !!(!!a ^ !!b);
     }
-    
+
     /**
      * Returns true if both parameters are undefined
      */
     function isBothUndefined(a, b) {
       return isUndefined(a) && isUndefined(b);
     }
-    
+
     /**
      * Returns true if the two input exception interfaces have the same content
      */
     function isSameException(ex1, ex2) {
       if (isOnlyOneTruthy(ex1, ex2)) return false;
-    
+
       ex1 = ex1.values[0];
       ex2 = ex2.values[0];
-    
+
       if (ex1.type !== ex2.type || ex1.value !== ex2.value) return false;
-    
+
       // in case both stacktraces are undefined, we can't decide so default to false
       if (isBothUndefined(ex1.stacktrace, ex2.stacktrace)) return false;
-    
+
       return isSameStacktrace(ex1.stacktrace, ex2.stacktrace);
     }
-    
+
     /**
      * Returns true if the two input stack trace interfaces have the same content
      */
     function isSameStacktrace(stack1, stack2) {
       if (isOnlyOneTruthy(stack1, stack2)) return false;
-    
+
       var frames1 = stack1.frames;
       var frames2 = stack2.frames;
-    
+
       // Exit early if stacktrace is malformed
       if (frames1 === undefined || frames2 === undefined) return false;
-    
+
       // Exit early if frame count differs
       if (frames1.length !== frames2.length) return false;
-    
+
       // Iterate through every frame; bail out if anything differs
       var a, b;
       for (var i = 0; i < frames1.length; i++) {
@@ -2872,7 +2872,7 @@
       }
       return true;
     }
-    
+
     /**
      * Polyfill a method
      * @param obj object e.g. `document`
@@ -2890,7 +2890,7 @@
         track.push([obj, name, orig]);
       }
     }
-    
+
     /**
      * Join values in array
      * @param input array of values to be joined together
@@ -2899,9 +2899,9 @@
      */
     function safeJoin(input, delimiter) {
       if (!isArray(input)) return '';
-    
+
       var output = [];
-    
+
       for (var i = 0; i < input.length; i++) {
         try {
           output.push(String(input[i]));
@@ -2909,24 +2909,24 @@
           output.push('[value cannot be serialized]');
         }
       }
-    
+
       return output.join(delimiter);
     }
-    
+
     // Default Node.js REPL depth
     var MAX_SERIALIZE_EXCEPTION_DEPTH = 3;
     // 50kB, as 100kB is max payload size, so half sounds reasonable
     var MAX_SERIALIZE_EXCEPTION_SIZE = 50 * 1024;
     var MAX_SERIALIZE_KEYS_LENGTH = 40;
-    
+
     function utf8Length(value) {
       return ~-encodeURI(value).split(/%..|./).length;
     }
-    
+
     function jsonSize(value) {
       return utf8Length(JSON.stringify(value));
     }
-    
+
     function serializeValue(value) {
       if (typeof value === 'string') {
         var maxLength = 40;
@@ -2938,21 +2938,21 @@
       ) {
         return value;
       }
-    
+
       var type = Object.prototype.toString.call(value);
-    
+
       // Node.js REPL notation
       if (type === '[object Object]') return '[Object]';
       if (type === '[object Array]') return '[Array]';
       if (type === '[object Function]')
         return value.name ? '[Function: ' + value.name + ']' : '[Function]';
-    
+
       return value;
     }
-    
+
     function serializeObject(value, depth) {
       if (depth === 0) return serializeValue(value);
-    
+
       if (isPlainObject(value)) {
         return Object.keys(value).reduce(function(acc, key) {
           acc[key] = serializeObject(value[key], depth - 1);
@@ -2963,68 +2963,68 @@
           return serializeObject(val, depth - 1);
         });
       }
-    
+
       return serializeValue(value);
     }
-    
+
     function serializeException(ex, depth, maxSize) {
       if (!isPlainObject(ex)) return ex;
-    
+
       depth = typeof depth !== 'number' ? MAX_SERIALIZE_EXCEPTION_DEPTH : depth;
       maxSize = typeof depth !== 'number' ? MAX_SERIALIZE_EXCEPTION_SIZE : maxSize;
-    
+
       var serialized = serializeObject(ex, depth);
-    
+
       if (jsonSize(stringify(serialized)) > maxSize) {
         return serializeException(ex, depth - 1);
       }
-    
+
       return serialized;
     }
-    
+
     function serializeKeysForMessage(keys, maxLength) {
       if (typeof keys === 'number' || typeof keys === 'string') return keys.toString();
       if (!Array.isArray(keys)) return '';
-    
+
       keys = keys.filter(function(key) {
         return typeof key === 'string';
       });
       if (keys.length === 0) return '[object has no keys]';
-    
+
       maxLength = typeof maxLength !== 'number' ? MAX_SERIALIZE_KEYS_LENGTH : maxLength;
       if (keys[0].length >= maxLength) return keys[0];
-    
+
       for (var usedKeys = keys.length; usedKeys > 0; usedKeys--) {
         var serialized = keys.slice(0, usedKeys).join(', ');
         if (serialized.length > maxLength) continue;
         if (usedKeys === keys.length) return serialized;
         return serialized + '\u2026';
       }
-    
+
       return '';
     }
-    
+
     function sanitize(input, sanitizeKeys) {
       if (!isArray(sanitizeKeys) || (isArray(sanitizeKeys) && sanitizeKeys.length === 0))
         return input;
-    
+
       var sanitizeRegExp = joinRegExp(sanitizeKeys);
       var sanitizeMask = '********';
       var safeInput;
-    
+
       try {
         safeInput = JSON.parse(stringify(input));
       } catch (o_O) {
         return input;
       }
-    
+
       function sanitizeWorker(workerInput) {
         if (isArray(workerInput)) {
           return workerInput.map(function(val) {
             return sanitizeWorker(val);
           });
         }
-    
+
         if (isPlainObject(workerInput)) {
           return Object.keys(workerInput).reduce(function(acc, k) {
             if (sanitizeRegExp.test(k)) {
@@ -3035,13 +3035,13 @@
             return acc;
           }, {});
         }
-    
+
         return workerInput;
       }
-    
+
       return sanitizeWorker(safeInput);
     }
-    
+
     module.exports = {
       isObject: isObject,
       isError: isError,
@@ -3080,48 +3080,48 @@
       serializeKeysForMessage: serializeKeysForMessage,
       sanitize: sanitize
     };
-    
+
     }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
     },{"7":7}],6:[function(_dereq_,module,exports){
     (function (global){
     var utils = _dereq_(5);
-    
+
     /*
      TraceKit - Cross brower stack traces
-    
+
      This was originally forked from github.com/occ/TraceKit, but has since been
      largely re-written and is now maintained as part of raven-js.  Tests for
      this are in test/vendor.
-    
+
      MIT license
     */
-    
+
     var TraceKit = {
       collectWindowErrors: true,
       debug: false
     };
-    
+
     // This is to be defensive in environments where window does not exist (see https://github.com/getsentry/raven-js/pull/785)
     var _window =
       typeof window !== 'undefined'
         ? window
         : typeof global !== 'undefined' ? global : typeof self !== 'undefined' ? self : {};
-    
+
     // global reference to slice
     var _slice = [].slice;
     var UNKNOWN_FUNCTION = '?';
-    
+
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error#Error_types
     var ERROR_TYPES_RE = /^(?:[Uu]ncaught (?:exception: )?)?(?:((?:Eval|Internal|Range|Reference|Syntax|Type|URI|)Error): )?(.*)$/;
-    
+
     function getLocationHref() {
       if (typeof document === 'undefined' || document.location == null) return '';
       return document.location.href;
     }
-    
+
     function getLocationOrigin() {
       if (typeof document === 'undefined' || document.location == null) return '';
-    
+
       // Oh dear IE10...
       if (!document.location.origin) {
         return (
@@ -3131,10 +3131,10 @@
           (document.location.port ? ':' + document.location.port : '')
         );
       }
-    
+
       return document.location.origin;
     }
-    
+
     /**
      * TraceKit.report: cross-browser processing of unhandled exceptions
      *
@@ -3179,7 +3179,7 @@
         lastArgs = null,
         lastException = null,
         lastExceptionStack = null;
-    
+
       /**
        * Add a crash handler.
        * @param {Function} handler
@@ -3188,7 +3188,7 @@
         installGlobalHandler();
         handlers.push(handler);
       }
-    
+
       /**
        * Remove a crash handler.
        * @param {Function} handler
@@ -3200,7 +3200,7 @@
           }
         }
       }
-    
+
       /**
        * Remove all crash handlers.
        */
@@ -3208,7 +3208,7 @@
         uninstallGlobalHandler();
         handlers = [];
       }
-    
+
       /**
        * Dispatch stack information to all handlers.
        * @param {Object.<string, *>} stack
@@ -3227,14 +3227,14 @@
             }
           }
         }
-    
+
         if (exception) {
           throw exception;
         }
       }
-    
+
       var _oldOnerrorHandler, _onErrorHandlerInstalled;
-    
+
       /**
        * Ensures all global unhandled exceptions are recorded.
        * Supported by Gecko and IE.
@@ -3252,7 +3252,7 @@
         var exception = utils.isErrorEvent(ex) ? ex.error : ex;
         // If 'msg' is ErrorEvent, get real message from inside
         var message = utils.isErrorEvent(msg) ? msg.message : msg;
-    
+
         if (lastExceptionStack) {
           TraceKit.computeStackTrace.augmentStackTraceWithInitialElement(
             lastExceptionStack,
@@ -3263,7 +3263,7 @@
           processLastException();
         } else if (exception && utils.isError(exception)) {
           // non-string `exception` arg; attempt to extract stack trace
-    
+
           // New chrome and blink send along a real error object
           // Let's just report that like a normal error.
           // See: https://mikewest.org/2013/08/debugging-runtime-errors-with-window-onerror
@@ -3275,10 +3275,10 @@
             line: lineNo,
             column: colNo
           };
-    
+
           var name = undefined;
           var groups;
-    
+
           if ({}.toString.call(message) === '[object String]') {
             var groups = message.match(ERROR_TYPES_RE);
             if (groups) {
@@ -3286,9 +3286,9 @@
               message = groups[2];
             }
           }
-    
+
           location.func = UNKNOWN_FUNCTION;
-    
+
           stack = {
             name: name,
             message: message,
@@ -3297,14 +3297,14 @@
           };
           notifyHandlers(stack, true);
         }
-    
+
         if (_oldOnerrorHandler) {
           return _oldOnerrorHandler.apply(this, arguments);
         }
-    
+
         return false;
       }
-    
+
       function installGlobalHandler() {
         if (_onErrorHandlerInstalled) {
           return;
@@ -3313,7 +3313,7 @@
         _window.onerror = traceKitWindowOnError;
         _onErrorHandlerInstalled = true;
       }
-    
+
       function uninstallGlobalHandler() {
         if (!_onErrorHandlerInstalled) {
           return;
@@ -3322,7 +3322,7 @@
         _onErrorHandlerInstalled = false;
         _oldOnerrorHandler = undefined;
       }
-    
+
       function processLastException() {
         var _lastExceptionStack = lastExceptionStack,
           _lastArgs = lastArgs;
@@ -3331,7 +3331,7 @@
         lastException = null;
         notifyHandlers.apply(null, [_lastExceptionStack, false].concat(_lastArgs));
       }
-    
+
       /**
        * Reports an unhandled Error to TraceKit.
        * @param {Error} ex
@@ -3348,12 +3348,12 @@
             processLastException();
           }
         }
-    
+
         var stack = TraceKit.computeStackTrace(ex);
         lastExceptionStack = stack;
         lastException = ex;
         lastArgs = args;
-    
+
         // If the stack trace is incomplete, wait for 2 seconds for
         // slow slow IE to see if onerror occurs or not before reporting
         // this exception; otherwise, we will end up with an incomplete
@@ -3363,18 +3363,18 @@
             processLastException();
           }
         }, stack.incomplete ? 2000 : 0);
-    
+
         if (rethrow !== false) {
           throw ex; // re-throw to propagate to the top level (and cause window.onerror)
         }
       }
-    
+
       report.subscribe = subscribe;
       report.unsubscribe = unsubscribe;
       report.uninstall = unsubscribeAll;
       return report;
     })();
-    
+
     /**
      * TraceKit.computeStackTrace: cross-browser stack traces in JavaScript
      *
@@ -3463,7 +3463,7 @@
       // ex.name = ReferenceError
       // ex.opera#sourceloc = 11  (pretty much useless, duplicates the info in ex.message)
       // ex.stacktrace = n/a; see 'opera:config#UserPrefs|Exceptions Have Stacktrace'
-    
+
       /**
        * Computes stack trace information from the stack property.
        * Chrome and Gecko use this property.
@@ -3472,7 +3472,7 @@
        */
       function computeStackTraceFromStackProp(ex) {
         if (typeof ex.stack === 'undefined' || !ex.stack) return;
-    
+
         var chrome = /^\s*at (?:(.*?) ?\()?((?:file|https?|blob|chrome-extension|native|eval|webpack|<anonymous>|[a-z]:|\/).*?)(?::(\d+))?(?::(\d+))?\)?\s*$/i;
         var winjs = /^\s*at (?:((?:\[object object\])?.+) )?\(?((?:file|ms-appx(?:-web)|https?|webpack|blob):.*?):(\d+)(?::(\d+))?\)?\s*$/i;
         // NOTE: blob urls are now supposed to always have an origin, therefore it's format
@@ -3487,7 +3487,7 @@
         var parts;
         var element;
         var reference = /^(.*) is undefined$/.exec(ex.message);
-    
+
         for (var i = 0, j = lines.length; i < j; ++i) {
           if ((parts = chrome.exec(lines[i]))) {
             var isNative = parts[2] && parts[2].indexOf('native') === 0; // start of line
@@ -3537,11 +3537,11 @@
           } else {
             continue;
           }
-    
+
           if (!element.func && element.line) {
             element.func = UNKNOWN_FUNCTION;
           }
-    
+
           if (element.url && element.url.substr(0, 5) === 'blob:') {
             // Special case for handling JavaScript loaded into a blob.
             // We use a synchronous AJAX request here as a blob is already in
@@ -3551,42 +3551,42 @@
             var xhr = new XMLHttpRequest();
             xhr.open('GET', element.url, false);
             xhr.send(null);
-    
+
             // If we failed to download the source, skip this patch
             if (xhr.status === 200) {
               var source = xhr.responseText || '';
-    
+
               // We trim the source down to the last 300 characters as sourceMappingURL is always at the end of the file.
               // Why 300? To be in line with: https://github.com/getsentry/sentry/blob/4af29e8f2350e20c28a6933354e4f42437b4ba42/src/sentry/lang/javascript/processor.py#L164-L175
               source = source.slice(-300);
-    
+
               // Now we dig out the source map URL
               var sourceMaps = source.match(/\/\/# sourceMappingURL=(.*)$/);
-    
+
               // If we don't find a source map comment or we find more than one, continue on to the next element.
               if (sourceMaps) {
                 var sourceMapAddress = sourceMaps[1];
-    
+
                 // Now we check to see if it's a relative URL.
                 // If it is, convert it to an absolute one.
                 if (sourceMapAddress.charAt(0) === '~') {
                   sourceMapAddress = getLocationOrigin() + sourceMapAddress.slice(1);
                 }
-    
+
                 // Now we strip the '.map' off of the end of the URL and update the
                 // element so that Sentry can match the map to the blob.
                 element.url = sourceMapAddress.slice(0, -4);
               }
             }
           }
-    
+
           stack.push(element);
         }
-    
+
         if (!stack.length) {
           return null;
         }
-    
+
         return {
           name: ex.name,
           message: ex.message,
@@ -3594,7 +3594,7 @@
           stack: stack
         };
       }
-    
+
       /**
        * Adds information about the first frame to incomplete stack traces.
        * Safari and IE require this to get complete data on the first frame.
@@ -3613,14 +3613,14 @@
           url: url,
           line: lineNo
         };
-    
+
         if (initial.url && initial.line) {
           stackInfo.incomplete = false;
-    
+
           if (!initial.func) {
             initial.func = UNKNOWN_FUNCTION;
           }
-    
+
           if (stackInfo.stack.length > 0) {
             if (stackInfo.stack[0].url === initial.url) {
               if (stackInfo.stack[0].line === initial.line) {
@@ -3634,17 +3634,17 @@
               }
             }
           }
-    
+
           stackInfo.stack.unshift(initial);
           stackInfo.partial = true;
           return true;
         } else {
           stackInfo.incomplete = true;
         }
-    
+
         return false;
       }
-    
+
       /**
        * Computes stack trace information by walking the arguments.caller
        * chain at the time the exception occurred. This will cause earlier
@@ -3662,7 +3662,7 @@
           parts,
           item,
           source;
-    
+
         for (
           var curr = computeStackTraceByWalkingCallerChain.caller;
           curr && !recursion;
@@ -3672,41 +3672,41 @@
             // console.log('skipping internal function');
             continue;
           }
-    
+
           item = {
             url: null,
             func: UNKNOWN_FUNCTION,
             line: null,
             column: null
           };
-    
+
           if (curr.name) {
             item.func = curr.name;
           } else if ((parts = functionName.exec(curr.toString()))) {
             item.func = parts[1];
           }
-    
+
           if (typeof item.func === 'undefined') {
             try {
               item.func = parts.input.substring(0, parts.input.indexOf('{'));
             } catch (e) {}
           }
-    
+
           if (funcs['' + curr]) {
             recursion = true;
           } else {
             funcs['' + curr] = true;
           }
-    
+
           stack.push(item);
         }
-    
+
         if (depth) {
           // console.log('depth is ' + depth);
           // console.log('stack is ' + stack.length);
           stack.splice(0, depth);
         }
-    
+
         var result = {
           name: ex.name,
           message: ex.message,
@@ -3721,7 +3721,7 @@
         );
         return result;
       }
-    
+
       /**
        * Computes a stack trace for an exception.
        * @param {Error} ex
@@ -3730,7 +3730,7 @@
       function computeStackTrace(ex, depth) {
         var stack = null;
         depth = depth == null ? 0 : +depth;
-    
+
         try {
           stack = computeStackTraceFromStackProp(ex);
           if (stack) {
@@ -3741,7 +3741,7 @@
             throw e;
           }
         }
-    
+
         try {
           stack = computeStackTraceByWalkingCallerChain(ex, depth + 1);
           if (stack) {
@@ -3758,42 +3758,42 @@
           url: getLocationHref()
         };
       }
-    
+
       computeStackTrace.augmentStackTraceWithInitialElement = augmentStackTraceWithInitialElement;
       computeStackTrace.computeStackTraceFromStackProp = computeStackTraceFromStackProp;
-    
+
       return computeStackTrace;
     })();
-    
+
     module.exports = TraceKit;
-    
+
     }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
     },{"5":5}],7:[function(_dereq_,module,exports){
     /*
      json-stringify-safe
      Like JSON.stringify, but doesn't throw on circular references.
-    
+
      Originally forked from https://github.com/isaacs/json-stringify-safe
      version 5.0.1 on 3/8/2017 and modified to handle Errors serialization
      and IE8 compatibility. Tests for this are in test/vendor.
-    
+
      ISC license: https://github.com/isaacs/json-stringify-safe/blob/master/LICENSE
     */
-    
+
     exports = module.exports = stringify;
     exports.getSerialize = serializer;
-    
+
     function indexOf(haystack, needle) {
       for (var i = 0; i < haystack.length; ++i) {
         if (haystack[i] === needle) return i;
       }
       return -1;
     }
-    
+
     function stringify(obj, replacer, spaces, cycleReplacer) {
       return JSON.stringify(obj, serializer(replacer, cycleReplacer), spaces);
     }
-    
+
     // https://github.com/ftlabs/js-abbreviate/blob/fa709e5f139e7770a71827b1893f22418097fbda/index.js#L95-L106
     function stringifyError(value) {
       var err = {
@@ -3802,20 +3802,20 @@
         message: value.message,
         name: value.name
       };
-    
+
       for (var i in value) {
         if (Object.prototype.hasOwnProperty.call(value, i)) {
           err[i] = value[i];
         }
       }
-    
+
       return err;
     }
-    
+
     function serializer(replacer, cycleReplacer) {
       var stack = [];
       var keys = [];
-    
+
       if (cycleReplacer == null) {
         cycleReplacer = function(key, value) {
           if (stack[0] === value) {
@@ -3824,26 +3824,26 @@
           return '[Circular ~.' + keys.slice(0, indexOf(stack, value)).join('.') + ']';
         };
       }
-    
+
       return function(key, value) {
         if (stack.length > 0) {
           var thisPos = indexOf(stack, this);
           ~thisPos ? stack.splice(thisPos + 1) : stack.push(this);
           ~thisPos ? keys.splice(thisPos, Infinity, key) : keys.push(key);
-    
+
           if (~indexOf(stack, value)) {
             value = cycleReplacer.call(this, key, value);
           }
         } else {
           stack.push(value);
         }
-    
+
         return replacer == null
           ? value instanceof Error ? stringifyError(value) : value
           : replacer.call(this, key, value);
       };
     }
-    
+
     },{}],8:[function(_dereq_,module,exports){
     /*
      * JavaScript MD5
@@ -3863,7 +3863,7 @@
      * Distributed under the BSD License
      * See http://pajhome.org.uk/crypt/md5 for more info.
      */
-    
+
     /*
     * Add integers, wrapping at 2^32. This uses 16-bit operations internally
     * to work around bugs in some JS interpreters.
@@ -3873,14 +3873,14 @@
       var msw = (x >> 16) + (y >> 16) + (lsw >> 16);
       return (msw << 16) | (lsw & 0xffff);
     }
-    
+
     /*
     * Bitwise rotate a 32-bit number to the left.
     */
     function bitRotateLeft(num, cnt) {
       return (num << cnt) | (num >>> (32 - cnt));
     }
-    
+
     /*
     * These functions implement the four basic operations the algorithm uses.
     */
@@ -3899,7 +3899,7 @@
     function md5ii(a, b, c, d, x, s, t) {
       return md5cmn(c ^ (b | ~d), a, b, x, s, t);
     }
-    
+
     /*
     * Calculate the MD5 of an array of little-endian words, and a bit length.
     */
@@ -3907,7 +3907,7 @@
       /* append padding */
       x[len >> 5] |= 0x80 << (len % 32);
       x[(((len + 64) >>> 9) << 4) + 14] = len;
-    
+
       var i;
       var olda;
       var oldb;
@@ -3917,13 +3917,13 @@
       var b = -271733879;
       var c = -1732584194;
       var d = 271733878;
-    
+
       for (i = 0; i < x.length; i += 16) {
         olda = a;
         oldb = b;
         oldc = c;
         oldd = d;
-    
+
         a = md5ff(a, b, c, d, x[i], 7, -680876936);
         d = md5ff(d, a, b, c, x[i + 1], 12, -389564586);
         c = md5ff(c, d, a, b, x[i + 2], 17, 606105819);
@@ -3940,7 +3940,7 @@
         d = md5ff(d, a, b, c, x[i + 13], 12, -40341101);
         c = md5ff(c, d, a, b, x[i + 14], 17, -1502002290);
         b = md5ff(b, c, d, a, x[i + 15], 22, 1236535329);
-    
+
         a = md5gg(a, b, c, d, x[i + 1], 5, -165796510);
         d = md5gg(d, a, b, c, x[i + 6], 9, -1069501632);
         c = md5gg(c, d, a, b, x[i + 11], 14, 643717713);
@@ -3957,7 +3957,7 @@
         d = md5gg(d, a, b, c, x[i + 2], 9, -51403784);
         c = md5gg(c, d, a, b, x[i + 7], 14, 1735328473);
         b = md5gg(b, c, d, a, x[i + 12], 20, -1926607734);
-    
+
         a = md5hh(a, b, c, d, x[i + 5], 4, -378558);
         d = md5hh(d, a, b, c, x[i + 8], 11, -2022574463);
         c = md5hh(c, d, a, b, x[i + 11], 16, 1839030562);
@@ -3974,7 +3974,7 @@
         d = md5hh(d, a, b, c, x[i + 12], 11, -421815835);
         c = md5hh(c, d, a, b, x[i + 15], 16, 530742520);
         b = md5hh(b, c, d, a, x[i + 2], 23, -995338651);
-    
+
         a = md5ii(a, b, c, d, x[i], 6, -198630844);
         d = md5ii(d, a, b, c, x[i + 7], 10, 1126891415);
         c = md5ii(c, d, a, b, x[i + 14], 15, -1416354905);
@@ -3991,7 +3991,7 @@
         d = md5ii(d, a, b, c, x[i + 11], 10, -1120210379);
         c = md5ii(c, d, a, b, x[i + 2], 15, 718787259);
         b = md5ii(b, c, d, a, x[i + 9], 21, -343485551);
-    
+
         a = safeAdd(a, olda);
         b = safeAdd(b, oldb);
         c = safeAdd(c, oldc);
@@ -3999,7 +3999,7 @@
       }
       return [a, b, c, d];
     }
-    
+
     /*
     * Convert an array of little-endian words to a string
     */
@@ -4012,7 +4012,7 @@
       }
       return output;
     }
-    
+
     /*
     * Convert a raw string to an array of little-endian words
     * Characters >255 have their high-byte silently ignored.
@@ -4030,14 +4030,14 @@
       }
       return output;
     }
-    
+
     /*
     * Calculate the MD5 of a raw string
     */
     function rstrMD5(s) {
       return binl2rstr(binlMD5(rstr2binl(s), s.length * 8));
     }
-    
+
     /*
     * Calculate the HMAC-MD5, of a key and some data (raw strings)
     */
@@ -4058,7 +4058,7 @@
       hash = binlMD5(ipad.concat(rstr2binl(data)), 512 + data.length * 8);
       return binl2rstr(binlMD5(opad.concat(hash), 512 + 128));
     }
-    
+
     /*
     * Convert a raw string to a hex string
     */
@@ -4073,14 +4073,14 @@
       }
       return output;
     }
-    
+
     /*
     * Encode a string as utf-8
     */
     function str2rstrUTF8(input) {
       return unescape(encodeURIComponent(input));
     }
-    
+
     /*
     * Take string arguments and return either raw or hex encoded strings
     */
@@ -4096,7 +4096,7 @@
     function hexHMACMD5(k, d) {
       return rstr2hex(rawHMACMD5(k, d));
     }
-    
+
     function md5(string, key, raw) {
       if (!key) {
         if (!raw) {
@@ -4109,8 +4109,8 @@
       }
       return rawHMACMD5(key, string);
     }
-    
+
     module.exports = md5;
-    
+
     },{}]},{},[4])(4)
     });
